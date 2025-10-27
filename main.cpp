@@ -4,17 +4,36 @@
 #include <vector>
 #include <random>
 #include <ctime>
-#include "ConverterJSON.h" // Используем новый заголовочный файл
+#include "ConverterJSON.h"
+#include "InvertedIndex.h"
+#include "SearchServer.h"
 #include "gtest/gtest.h"
-
-TEST(sample_test_case, sample_test) {
-    EXPECT_EQ(1, 0);
-}
-
-// Пространство имен для работы с файловой системой
 namespace fs = std::filesystem;
 
-// Функция для создания тестовых файлов (остается прежней)
+extern void TestWord(InvertedIndex& index, const std::string& word);
+
+//функция для форматирования текст
+void PrintIndex(const std::map<std::string, std::vector<Entry>>& index) {
+    std::cout << "\n--- Inverted Index Content ---" << std::endl;
+    for (const auto& pair : index) {
+        std::cout << "index[\"" << pair.first << "\"] = ";
+
+        for (size_t i = 0; i < pair.second.size(); ++i) {
+            // Печатаем {doc_id, count}
+            std::cout << "{" << pair.second[i].doc_id << ", "
+                      << pair.second[i].count << "}";
+
+            // Добавляем запятую, если это не последний элемент
+            if (i < pair.second.size() - 1) {
+                std::cout << ", ";
+            }
+        }
+        std::cout << std::endl;
+    }
+    std::cout << "------------------------------" << std::endl;
+}
+
+
 void setup_test_environment() {
     // Создадим директорию 'resources'
     fs::create_directory("resources");
@@ -49,13 +68,14 @@ void setup_test_environment() {
 }
 
 int main() {
-    setlocale(LC_ALL, "RUS");
+    setlocale(LC_ALL, "RUS"); // Clion не дружит с локалями, так что вывод в основном на английском
     srand(unsigned(time(NULL)));
-    //system("chcp 1251");
 
     setup_test_environment();
     std::cout << "\n--- Запуск теста ConverterJSON ---" << std::endl;
 
+    //Старый вариант
+    /*
     try {
         // Инициализация класса ConverterJSON
         ConverterJSON converter;
@@ -99,6 +119,83 @@ int main() {
         return 1;
     }
 
-    //system("pause");
+    //Тест инверсного индекса
+    std::vector<std::string> document_texts = {
+        "milk sugar salt",                     // doc_id = 0
+        "milk a milk b milk c milk d"          // doc_id = 1
+    };
+
+    // 2. Создаем экземпляр класса
+    InvertedIndex index;
+
+    // 3. Обновляем базу (это запустит индексацию)
+    index.UpdateDocumentBase(document_texts);
+
+    // 4. Получаем и печатаем результат
+    // Мы используем GetFrequencyDictionary() для получения данных
+    PrintIndex(index.GetFrequencyDictionary());
+    */
+
+    try {
+        // 1. Инициализация и загрузка конфигурации
+        ConverterJSON converter;
+        std::vector<std::string> docs_content = converter.GetTextDocuments();
+        std::vector<std::string> requests = converter.GetRequests();
+
+        // 2. Индексация документов
+        InvertedIndex index;
+        index.UpdateDocumentBase(docs_content); // Запустит многопоточную индексацию
+
+        // 3. Создание SearchServer
+        std::cout << "\n--- ПОИСК ЗАПРОСОВ ---" << std::endl;
+        SearchServer server(index);
+
+        // 4. Запуск поиска
+        std::vector<std::vector<RelativeIndex>> answers = server.search(requests);
+
+        // 5. Запись результатов в answers.json
+        converter.putAnswers(answers);
+
+    } catch (const std::exception& e) {
+        std::cerr << "\n--- КРИТИЧЕСКАЯ ОШИБКА ---" << std::endl;
+        std::cerr << "Ошибка: " << e.what() << std::endl;
+        return 1;
+    }
+
+    // 1. Создаем базу документов
+    std::vector<std::string> document_texts = {
+        "milk sugar salt",                     // doc_id = 0
+        "milk a milk b milk c milk d",         // doc_id = 1
+        "salt water and sugar"                 // doc_id = 2
+    };
+
+    // 2. Создаем экземпляр класса
+    InvertedIndex index;
+
+    // 3. Обновляем базу (это запустит многопоточную индексацию)
+    index.UpdateDocumentBase(document_texts);
+
+    // 4. Тестируем новый интерфейс GetWordCount
+    std::cout << "\n--- Testing GetWordCount ---" << std::endl;
+
+    TestWord(index, "milk");   // Ожидается {0, 1}, {1, 4}
+    TestWord(index, "sugar");  // Ожидается {0, 1}, {2, 1}
+    TestWord(index, "a");      // Ожидается {1, 1}
+    TestWord(index, "water");  // Ожидается {2, 1}
+    TestWord(index, "banana"); // Ожидается "Word not found"
+
+    // 5. Тестируем оператор == (для GTest)
+    Entry e1(0, 1);
+    Entry e2(0, 1);
+    Entry e3(1, 4);
+
+    if (e1 == e2) {
+        std::cout << "\n(Test OK: e1 == e2)" << std::endl;
+    }
+    if (!(e1 == e3)) {
+        std::cout << "(Test OK: e1 != e3)" << std::endl;
+    }
+
+    system("pause");
     return 0;
 }

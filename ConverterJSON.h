@@ -10,13 +10,11 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <fstream>
-#include <stdexcept>
 #include <filesystem>
-#include <iomanip>
-#include <algorithm>
-
+#include <fstream>
 #include "nlohmann_json\include\nlohmann\json.hpp"
+
+class RelativeIndex; //предварительная декларация
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -46,12 +44,17 @@ class ConverterJSON {
 
     std::vector<std::string> GetRequests();
 
-    void putAnswers(const std::vector<RequestAnswer>& answers);
+    void putAnswers(const std::vector<std::vector<RelativeIndex>>& search_results);
 private:
     void system_load_config();
 
     static const std::string APP_VERSION;
 
+    const std::string APPLICATION_VERSION = "1.0";
+    const std::string CONFIG_PATH = "config.json";
+    const std::string REQUESTS_PATH = "requests.json";
+
+    nlohmann::json m_config_data;
     // Пути к файлам
     std::string m_config_path;
     std::string m_requests_path;

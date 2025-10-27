@@ -9,7 +9,6 @@ set (JSO)
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 
 include(FetchContent)
-
 FetchContent_Declare(
         googletest
         URL https://github.com/google/googletest/archive/refs/tags/v1.17.0.zip
@@ -20,8 +19,14 @@ FetchContent_MakeAvailable(googletest)
 add_subdirectory(nlohmann_json)
 
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
+#include_directories(nlohmann_json/single_include)
+include_directories(nlohmann_json/include)
 
-add_executable(${PROJECT_NAME} main.cpp ConverterJSON.cpp) #Project name = search_engine
+add_executable(${PROJECT_NAME} main.cpp ConverterJSON.cpp
+        tests/module_test.cpp
+        InvertedIndex.cpp
+        SearchServer.cpp
+        SearchServer.h) #Project name = search_engine
 
 add_executable(unit_tests tests/module_test.cpp)
 
@@ -34,5 +39,4 @@ target_link_libraries(search_engine PRIVATE gtest_main)
 
 enable_testing()
 include(GoogleTest)
-
 #gtest_discover_tests(search_engine) #поиск тестов

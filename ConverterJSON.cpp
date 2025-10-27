@@ -3,7 +3,7 @@
 //
 
 #include "ConverterJSON.h"
-
+#include "SearchServer.h"
 const std::string ConverterJSON::APP_VERSION = "1.0";
 
 ConverterJSON::ConverterJSON(
@@ -74,23 +74,28 @@ void ConverterJSON::system_load_config() {
 
 //Метод получения содержимого файлов
 std::vector<std::string> ConverterJSON::GetTextDocuments() {
-    std::vector<std::string> documents_content;
+    std::vector<std::string> documents;
 
-    // Итерируемся по уже проверенным и сохраненным путям
-    for (const auto& file_path : m_file_paths) {
-        std::ifstream file_stream(file_path);
+    // Используем m_config_data, загруженную и проверенную в конструкторе
+    const auto& files_array = m_config_data.at("files");
 
-        // Читаем все содержимое файла в строку
-        if (file_stream.is_open()) {
-            std::string content((std::istreambuf_iterator<char>(file_stream)),
-                                 std::istreambuf_iterator<char>());
-            documents_content.push_back(content);
-        } else {
-            std::cerr << "Error: Could not open file to read content: " << file_path << std::endl;
+    for (const auto& file_path_json : files_array) {
+        std::string file_path = file_path_json.get<std::string>();
+        std::ifstream document_file(file_path);
+
+        // Проверка существования файла
+        if (!document_file.is_open()) {
+            std::cerr << "Warning: File not found at path: " << file_path
+                      << ". Skipping this document." << std::endl;
+            continue; // Переходим к следующему файлу
         }
-    }
 
-    return documents_content;
+        // Чтение содержимого
+        std::stringstream ss;
+        ss << document_file.rdbuf();
+        documents.push_back(ss.str());
+    }
+    return documents;
 }
 
 int ConverterJSON::GetResponsesLimit() {
@@ -132,49 +137,54 @@ std::vector<std::string> ConverterJSON::GetRequests() {
     return requests_list;
 }
 
-void ConverterJSON::putAnswers(const std::vector<RequestAnswer>& answers_data) {
+void ConverterJSON::putAnswers(const std::vector<std::vector<RelativeIndex>>& search_results) {
     json root_answers;
     json answers_obj;
+    size_t request_id_counter = 1;
 
-    for (const auto& answer : answers_data) {
+    int max_responses = GetResponsesLimit();
+
+    for (const auto& query_results : search_results) {
+        std::string request_id = "request";
+        request_id+= (request_id_counter < 10 ? "00" : (request_id_counter < 100 ? "0" : "")) + std::to_string(request_id_counter++);
+
         json request_entry;
 
-        request_entry["result"] = answer.result ? "true" : "false";
+        if (query_results.empty()) {
+            request_entry["result"] = "false";
+        } else {
+            request_entry["result"] = "true";
 
-        if (!answer.result) {
-            answers_obj[answer.request_id] = request_entry;
-            continue;
-        }
-
-        if (answer.matches.size() > 1) {
-            json relevance_array = json::array();
-
-            // Копируем и сортируем по убыванию ранга
-            std::vector<DocumentRank> sorted_matches = answer.matches;
-            std::sort(sorted_matches.begin(), sorted_matches.end(), [](const DocumentRank& a, const DocumentRank& b) {
-                return a.rank > b.rank; // Сортируем по убыванию rank
-            });
-
-            for (const auto& match : sorted_matches) {
-                relevance_array.push_back({
-                    {"docid", match.docid},
-                    {"rank", match.rank}
-                });
+            // Ограничиваем количество ответов
+            size_t limit = std::min((size_t)max_responses, query_results.size());
+            if (limit == 1) {
+                const auto& match = query_results[0];
+                request_entry["docid"] = match.doc_id;
+                request_entry["rank"] = std::stod(std::to_string(match.rank).substr(0, std::to_string(match.rank).find('.') + 4));
             }
-            request_entry["relevance"] = relevance_array;
-        }
-        else if (answer.matches.size() == 1) {
-            const auto& match = answer.matches[0];
-            request_entry["docid"] = match.docid;
-            request_entry["rank"] = match.rank;
+            // Если найдено > 1 ответа, используем "relevance"
+            else if (limit > 1) {
+                json relevance_array = json::array();
+
+                for (size_t i = 0; i < limit; ++i) {
+                    const auto& match = query_results[i];
+                    std::string rank_str = std::to_string(match.rank);
+                    double formatted_rank = std::stod(rank_str.substr(0, rank_str.find('.') + 4));
+
+                    relevance_array.push_back({
+                        {"docid", match.doc_id},
+                        {"rank", formatted_rank}
+                    });
+                }
+                request_entry["relevance"] = relevance_array;
+            }
         }
 
-        answers_obj[answer.request_id] = request_entry;
+        answers_obj[request_id] = request_entry;
     }
 
     root_answers["answers"] = answers_obj;
 
-    // Создание/перезапись файла answers.json
     try {
         std::ofstream answers_file(m_answers_path);
         answers_file << std::setw(4) << root_answers << std::endl;
