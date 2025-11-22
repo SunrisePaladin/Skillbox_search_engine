@@ -12,7 +12,7 @@
 #include <vector>
 #include <filesystem>
 #include <fstream>
-#include "nlohmann_json\include\nlohmann\json.hpp"
+#include "../nlohmann_json/include/nlohmann/json.hpp"
 
 class RelativeIndex; //предварительная декларация
 

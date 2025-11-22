@@ -6,16 +6,11 @@
 #include <ctime>
 #include "gtest/gtest.h"
 
-#include "..\InvertedIndex.h"
-#include "..\SearchServer.h"
+#include "../Headers/InvertedIndex.h"
+#include "../Headers/SearchServer.h"
 
 struct RelativeIndex;
 using namespace std;
-
-// TEST(sample_test_case, sample_test)
-// {
-//     EXPECT_EQ(1, 1);
-// }
 
 void TestWord(InvertedIndex& index, const std::string& word) {
     std::cout << "Testing word: \"" << word << "\"" << std::endl;

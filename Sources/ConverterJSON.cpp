@@ -2,8 +2,8 @@
 // Created by ArtSolo on 26.10.2025.
 //
 
-#include "ConverterJSON.h"
-#include "SearchServer.h"
+#include "../Headers/ConverterJSON.h"
+#include "../Headers/SearchServer.h"
 const std::string ConverterJSON::APP_VERSION = "1.0";
 
 ConverterJSON::ConverterJSON(
@@ -25,7 +25,7 @@ void ConverterJSON::system_load_config() {
     }
 
     std::ifstream config_file(m_config_path);
-    json data;
+    nlohmann::json data;
     try {
         data = json::parse(config_file);
     } catch (json::parse_error& e) {
@@ -69,6 +69,8 @@ void ConverterJSON::system_load_config() {
         std::cout << "Warning: 'files' field is missing or not a list. No files to index." << std::endl;
     }
 
+    m_config_data = data;
+
     std::cout << "Configuration loaded. " << m_file_paths.size() << " file paths stored for indexing." << std::endl;
 }
 
@@ -76,8 +78,18 @@ void ConverterJSON::system_load_config() {
 std::vector<std::string> ConverterJSON::GetTextDocuments() {
     std::vector<std::string> documents;
 
+    if (!m_config_data.contains("files")) {
+        std::cerr << "Ошибка: Ключ 'files' отсутствует в конфигурации." << std::endl;
+        return documents;
+    }
+
     // Используем m_config_data, загруженную и проверенную в конструкторе
     const auto& files_array = m_config_data.at("files");
+
+    if (!files_array.is_array()) {
+        std::cerr << "Ошибка: Значение по ключу 'files' не является массивом." << std::endl;
+        return documents;
+    }
 
     for (const auto& file_path_json : files_array) {
         std::string file_path = file_path_json.get<std::string>();
@@ -95,6 +107,7 @@ std::vector<std::string> ConverterJSON::GetTextDocuments() {
         ss << document_file.rdbuf();
         documents.push_back(ss.str());
     }
+
     return documents;
 }
 

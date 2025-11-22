@@ -2,7 +2,7 @@
 // Created by Артём on 27.10.2025.
 //
 
-#include "SearchServer.h"
+#include "../Headers/SearchServer.h"
 #include <sstream>
 #include <cmath>
 #include <limits>
@@ -53,7 +53,7 @@ std::vector<std::vector<RelativeIndex>> SearchServer::search(const std::vector<s
         std::map<size_t, size_t> abs_relevance = _calculate_absolute_relevance(unique_words);
 
         if (abs_relevance.empty()) {
-            final_results.push_back({});
+            final_results.emplace_back();
         }
         else {
             // 7, 8. Расчет относительной релевантности и сортировка

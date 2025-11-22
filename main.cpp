@@ -4,10 +4,12 @@
 #include <vector>
 #include <random>
 #include <ctime>
-#include "ConverterJSON.h"
-#include "InvertedIndex.h"
-#include "SearchServer.h"
+#include "Headers/ConverterJSON.h"
+#include "Headers/InvertedIndex.h"
+#include "Headers/SearchServer.h"
 #include "gtest/gtest.h"
+#include "windows.h"
+
 namespace fs = std::filesystem;
 
 extern void TestWord(InvertedIndex& index, const std::string& word);
@@ -68,73 +70,13 @@ void setup_test_environment() {
 }
 
 int main() {
-    setlocale(LC_ALL, "RUS"); // Clion не дружит с локалями, так что вывод в основном на английском
+    setlocale(LC_ALL, "russian"); // Clion не дружит с локалями, так что вывод в основном на английском
     srand(unsigned(time(NULL)));
+    system("chcp 1251");
+    SetConsoleOutputCP(CP_UTF8);
 
     setup_test_environment();
     std::cout << "\n--- Запуск теста ConverterJSON ---" << std::endl;
-
-    //Старый вариант
-    /*
-    try {
-        // Инициализация класса ConverterJSON
-        ConverterJSON converter;
-
-        std::cout << "\n--- Тест GetResponsesLimit ---" << std::endl;
-        int limit = converter.GetResponsesLimit();
-        std::cout << "Max Responses Limit: " << limit << std::endl; // Ожидается 5
-
-        std::cout << "\n--- Тест GetTextDocuments ---" << std::endl;
-        std::vector<std::string> docs = converter.GetTextDocuments();
-        std::cout << "Loaded " << docs.size() << " document(s) content:" << std::endl;
-        for (size_t i = 0; i < docs.size(); ++i) {
-            std::cout << "  [Doc ID " << i << "]: \"" << docs[i].substr(0, 30) << "...\"" << std::endl;
-        }
-
-        std::cout << "\n--- Тест GetRequests ---" << std::endl;
-        std::vector<std::string> requests = converter.GetRequests();
-        std::cout << "Loaded requests:" << std::endl;
-        for (size_t i = 0; i < requests.size(); ++i) {
-            std::cout << "  [Request ID " << i + 1 << "]: " << requests[i] << std::endl;
-        }
-
-        std::cout << "\n--- Тест putAnswers ---" << std::endl;
-
-        // Создание ответов для putAnswers
-        RequestAnswer req1;
-        req1.request_id = "request001";
-        req1.result = true;
-        req1.matches = {{0, 0.989}, {1, 0.897}}; // Найдены два документа
-
-        RequestAnswer req2;
-        req2.request_id = "request002";
-        req2.result = false; // Ничего не найдено
-
-        std::vector<RequestAnswer> answers_to_write = {req1, req2};
-        converter.putAnswers(answers_to_write);
-
-    } catch (const std::exception& e) {
-        std::cerr << "\n--- ПРОИЗОШЛА КРИТИЧЕСКАЯ ОШИБКА ---" << std::endl;
-        std::cerr << "Ошибка: " << e.what() << std::endl;
-        return 1;
-    }
-
-    //Тест инверсного индекса
-    std::vector<std::string> document_texts = {
-        "milk sugar salt",                     // doc_id = 0
-        "milk a milk b milk c milk d"          // doc_id = 1
-    };
-
-    // 2. Создаем экземпляр класса
-    InvertedIndex index;
-
-    // 3. Обновляем базу (это запустит индексацию)
-    index.UpdateDocumentBase(document_texts);
-
-    // 4. Получаем и печатаем результат
-    // Мы используем GetFrequencyDictionary() для получения данных
-    PrintIndex(index.GetFrequencyDictionary());
-    */
 
     try {
         // 1. Инициализация и загрузка конфигурации

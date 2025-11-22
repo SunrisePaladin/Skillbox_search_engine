@@ -22,11 +22,11 @@ include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 #include_directories(nlohmann_json/single_include)
 include_directories(nlohmann_json/include)
 
-add_executable(${PROJECT_NAME} main.cpp ConverterJSON.cpp
+add_executable(${PROJECT_NAME} main.cpp Sources/ConverterJSON.cpp
         tests/module_test.cpp
-        InvertedIndex.cpp
-        SearchServer.cpp
-        SearchServer.h) #Project name = search_engine
+        Sources/InvertedIndex.cpp
+        Sources/SearchServer.cpp
+        Headers/SearchServer.h) #Project name = search_engine
 
 add_executable(unit_tests tests/module_test.cpp)
 

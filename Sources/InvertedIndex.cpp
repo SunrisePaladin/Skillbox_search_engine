@@ -2,7 +2,7 @@
 // Created by Артём on 27.10.2025.
 //
 
-#include "InvertedIndex.h"
+#include "../Headers/InvertedIndex.h"
 #include <sstream>
 #include <iostream>
 #include <thread>
